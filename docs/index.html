@@ -97,7 +97,10 @@ footer{color:#66666f;font-size:13px;border-top:1px solid #23232b;padding-top:18p
       <tr><th>Model</th><th>Quant</th><th>Context</th><th>Decode</th><th>Notes</th></tr>
       <tr><td>Qwen3.6-35B-A3B</td><td>Q3_K_M (mixed 12.8 GB)</td><td>160K</td><td><b>47.8 t/s</b></td><td>43.0 t/s at 43.5K depth, 638 t/s prefill</td></tr>
       <tr><td>Qwen3.6-35B-A3B</td><td>IQ2_XXS (mixed 10.9 GB)</td><td>200K</td><td><b>50.3 t/s</b></td><td>43.0 t/s at 44K, ~10.8 GB VRAM</td></tr>
-      <tr><td>4B-class</td><td>Q4_K_M</td><td>16K</td><td><b>~90 t/s</b></td><td>always-on resident model, RAM ~0</td></tr>
+      <tr><td>Occamy-1.0 (abliterated 35B-A3B)</td><td>Q3_K_M (mixed 12.5 GB)</td><td>200K</td><td><b>50.5 t/s</b></td><td>quality gate 1.000/3 tasks</td></tr>
+      <tr><td>Qwen3.8-35B-Distill (abliterated)</td><td>mixed 13.7 GB + MTP head</td><td>131K</td><td><b>41.5 t/s</b></td><td>31.6 t/s at 53K, MTP acceptance 90-100%</td></tr>
+      <tr><td>Ornith-1.5-35B-A3B (abliterated)</td><td>mixed 10.9 GB</td><td>200K</td><td><b>45.0 t/s</b></td><td>at 43.5K depth, 890 t/s prefill</td></tr>
+      <tr><td>4B-class (dense GDN)</td><td>Q4_K_M</td><td>16K</td><td><b>~90 t/s</b></td><td>always-on resident model, RAM ~0</td></tr>
       <tr><td colspan="5"><small>Prefill at 43.5K: 638–867 t/s depending on quant/n-cpu-moe. Full tables in
         <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</small></td></tr>
     </table>

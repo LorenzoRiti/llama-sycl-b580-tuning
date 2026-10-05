@@ -9,7 +9,8 @@ with the llama.cpp **SYCL** backend on Windows.
 
 Headline result: a **35B-parameter MoE model (3B active) at 47–50 t/s decode and 160–200K context
 on one 12 GB card**, by offloading the MoE expert layers to the CPU and keeping everything else
-on the GPU.
+on the GPU. The same recipe applies to the whole Gated-DeltaNet MoE family — base models,
+distilled and community derivatives — not just one checkpoint.
 
 Target setup used for all measurements:
 
@@ -87,6 +88,27 @@ Same recipes work with single-type quants, expect somewhat different weights/VRA
 Prefill at 43.5K context: **638–867 t/s** depending on quant and `n-cpu-moe`.
 
 Short-context sweet spot (65K context, `--n-cpu-moe 8`): **63 t/s**.
+
+### Works across the family (Gated DeltaNet MoE, `qwen35moe`)
+
+The same recipe and the FA_PB knob apply to the whole Gated-DeltaNet MoE family, not just one
+model: base, distilled and community (abliterated) derivatives all share the architecture
+(`qwen35moe`, 256 experts x 2.6B, ~3B active) and the same attention shapes. Measured on the
+same single B580:
+
+| Model | Weights | `--n-cpu-moe` | context | short decode | decode @depth | prefill | notes |
+|---|---|---|---|---|---|---|---|
+| Qwen3.6-35B-A3B ("Nano" mix) | IQ2_XXS, 10.9 GB | 24 | 200,000 | 50.3 t/s | 43.0 t/s @43.5K | 690 t/s @43.5K | production daily driver |
+| Qwen3.6-35B-A3B ("Mini" mix) | Q3_K_M, 12.8 GB | 28 | 163,840 | 47.8 t/s | 43.0 t/s @43.5K | 638 t/s @43.5K | Q3_K/Q4_K/IQ2_S mix by depth |
+| Occamy-1.0 (abliterated 35B-A3B) | Q3_K_M, 12.5 GB | 24 | 200,000 | 50.5 t/s | - | - | quality gate 1.000/3 tasks |
+| Qwen3.8-35B-Distill (abliterated) | 13.7 GB mix | 32 | 131,072 | 41.5 t/s | 31.6 t/s @53K | 454-456 t/s @4K/53K | + MTP draft head, acceptance 90-100%, VRAM 11 GB |
+| Ornith-1.5-35B-A3B (abliterated) | 10.9 GB mix | - | 200,192 | - | 45.0 t/s @43.5K | 890 t/s @43.5K | |
+| Qwen3.8-4B-Distill (dense GDN) | Q4_K_M, 2.8 GB | - | 16,384 | ~90 t/s | - | - | always-on resident model |
+
+Prefix prefill for the Qwen3.8 distill measured at 4K and 53K context (454/456 t/s), decode
+41.5 t/s short and 31.6 t/s at 53K- that shape of the curve is typical for the family with
+`--n-cpu-moe 32`. All 35B-A3B weight files above are community mixed quants (declared file
+types Q3_K_M / IQ2_XXS); composition verified per tensor from the GGUF headers.
 
 ### Small always-on model
 

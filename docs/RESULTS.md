@@ -88,3 +88,23 @@ Measured with the server stopped, the B580 already had 2+ GB of dedicated VRAM i
 1. Connect the monitor to the motherboard output (iGPU); the desktop stops using the B580.
 2. Restart `dwm` / reboot; close browsers and capture tools before long sessions.
 3. Windows Settings → Display → Graphics: set browsers to "Power saving" (iGPU).
+
+## 7. Family coverage (Gated DeltaNet MoE, `qwen35moe`)
+
+Same recipe (`--n-cpu-moe`, `GGML_SYCL_FA_PB=160`) applied to six checkpoints of the same
+architecture family — base, distilled and community abliterated derivatives. All runs on the
+same B580 machine in the same week; every 35B-A3B weight file is a community mixed quant
+(declared types Q3_K_M / IQ2_XXS), per-tensor composition read from the GGUF headers.
+
+| Model | Weights | `--n-cpu-moe` | context | short decode | decode @depth | prefill |
+|---|---|---|---|---|---|---|
+| Qwen3.6-35B-A3B ("Nano" mix) | IQ2_XXS, 10.9 GB | 24 | 200,000 | 50.3 t/s | 43.0 @43.5K | 690 @43.5K |
+| Qwen3.6-35B-A3B ("Mini" mix) | Q3_K_M, 12.8 GB | 28 | 163,840 | 47.8 t/s | 43.0 @43.5K | 638 @43.5K |
+| Occamy-1.0 (abliterated 35B-A3B) | Q3_K_M, 12.5 GB | 24 | 200,000 | 50.5 t/s | - | - |
+| Qwen3.8-35B-Distill (abliterated, MTP) | 13.7 GB mix | 32 | 131,072 | 41.5 t/s | 31.6 @53K | 454-456 @4K/53K |
+| Ornith-1.5-35B-A3B (abliterated) | 10.9 GB mix | - | 200,192 | - | 45.0 @43.5K | 890 @43.5K |
+| Qwen3.8-4B-Distill (dense GDN) | Q4_K_M, 2.8 GB | - | 16,384 | ~90 t/s | - | - |
+
+Notes: Occamy-1.0 50.5 t/s is short-context decode with the production config and passed the
+3-task quality gate at 1.000. The Qwen3.8 distill runs carry a separate MTP draft head
+(acceptance 90–100%). Dense GDN (non-MoE) 4B runs fully on the GPU.
