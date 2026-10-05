@@ -59,7 +59,7 @@ footer{color:#66666f;font-size:13px;border-top:1px solid #23232b;padding-top:18p
   </div>
 
   <div class="kpis">
-    <div class="kpi"><b>47.79&nbsp;t/s</b><span>decode (35B-A3B Q8_0)</span></div>
+    <div class="kpi"><b>47.79&nbsp;t/s</b><span>decode (35B-A3B, 12.8 GB mixed quant)</span></div>
     <div class="kpi"><b>160K</b><span>context, f16 KV</span></div>
     <div class="kpi"><b>12&nbsp;GB</b><span>one B580, no second card</span></div>
     <div class="kpi"><b>7</b><span>focused patches</span></div>
@@ -95,8 +95,8 @@ footer{color:#66666f;font-size:13px;border-top:1px solid #23232b;padding-top:18p
     <h2>Measured results</h2>
     <table>
       <tr><th>Model</th><th>Quant</th><th>Context</th><th>Decode</th><th>Notes</th></tr>
-      <tr><td>Qwen3.6-35B-A3B</td><td>Q8_0</td><td>160K</td><td><b>47.8 t/s</b></td><td>43.0 t/s at 43.5K depth, 638 t/s prefill</td></tr>
-      <tr><td>Qwen3.6-35B-A3B</td><td>Q3_K_M-class</td><td>200K</td><td><b>50.3 t/s</b></td><td>43.0 t/s at 44K, ~10.8 GB VRAM</td></tr>
+      <tr><td>Qwen3.6-35B-A3B</td><td>Q3_K_M (mixed 12.8 GB)</td><td>160K</td><td><b>47.8 t/s</b></td><td>43.0 t/s at 43.5K depth, 638 t/s prefill</td></tr>
+      <tr><td>Qwen3.6-35B-A3B</td><td>IQ2_XXS (mixed 10.9 GB)</td><td>200K</td><td><b>50.3 t/s</b></td><td>43.0 t/s at 44K, ~10.8 GB VRAM</td></tr>
       <tr><td>4B-class</td><td>Q4_K_M</td><td>16K</td><td><b>~90 t/s</b></td><td>always-on resident model, RAM ~0</td></tr>
       <tr><td colspan="5"><small>Prefill at 43.5K: 638–867 t/s depending on quant/n-cpu-moe. Full tables in
         <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</small></td></tr>
@@ -116,7 +116,7 @@ cmake --build build -j
 <span class="c"># run a 35B-A3B on 12 GB</span>
 set GGML_SYCL_FA_PB=160
 set GGML_SYCL_HOST_PINNED_MEM=0
-llama-server -m model-Q8_0.gguf -ngl 99 --n-cpu-moe 28 -c 163840 -fa on -ctk f16 -ctv f16</pre>
+llama-server -m model.gguf -ngl 99 --n-cpu-moe 28 -c 163840 -fa on -ctk f16 -ctv f16</pre>
   </section>
 
   <section>

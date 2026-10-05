@@ -70,14 +70,19 @@ The model does not fit in VRAM; `--n-cpu-moe` keeps the expert FFNs on the CPU w
 Gated DeltaNet and shared experts stay on the GPU. Everything is read at DDR5 speed for the
 expert part, GPU speed for the rest.
 
-Measured on 35B-A3B (3B active), f16 KV, `-ub 1024 -b 2048`, `-fa on`:
+Measured on 35B-A3B (3B active), f16 KV (the launcher defaults of that period), `-ub 1024 -b 2048`, `-fa on`:
 
 | Quant | `--n-cpu-moe` | context | short decode | decode @43.5K | notes |
 |---|---|---|---|---|---|
-| Q3_K_M-class | 24 | 200,000 | 50.3 t/s | 43.0 t/s | daily driver, VRAM ~10.8 GB |
-| Q3_K_M-class | 20 | 180,224 | 52.0 t/s | 47.1 t/s | needs ~11.2 GB VRAM |
-| Q3_K_M-class | 16 | 163,840 | 55.8 t/s | 48.9 t/s | ~11.7 GB VRAM, RAM 77% |
-| Q8_0 | 28 | 163,840 | 47.8 t/s | 43.0 t/s | RAM-heavy variant |
+| IQ2_XXS (mixed) | 24 | 200,000 | 50.3 t/s | 43.0 t/s | daily driver, VRAM ~10.8 GB |
+| IQ2_XXS (mixed) | 20 | 180,224 | 52.0 t/s | 47.1 t/s | needs ~11.2 GB VRAM |
+| IQ2_XXS (mixed) | 16 | 163,840 | 55.8 t/s | 48.9 t/s | ~11.7 GB VRAM, RAM 77% |
+| Q3_K_M (mixed) | 28 | 163,840 | 47.8 t/s | 43.0 t/s | 12.8 GB mix: Q3_K/Q4_K/IQ2_S by depth |
+
+Both weight files are community **mixed quants** (declared file types: Q3_K_M / IQ2_XXS): higher
+precision on early layers, IQ2 on the deepest ones — that mix is part of why these numbers hold up.
+Quant column shows the declared type; per-tensor composition verified from the GGUF headers.
+Same recipes work with single-type quants, expect somewhat different weights/VRAM.
 
 Prefill at 43.5K context: **638–867 t/s** depending on quant and `n-cpu-moe`.
 

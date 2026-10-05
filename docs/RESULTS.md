@@ -26,7 +26,8 @@ from `llama-server` timings; prefill = prompt-processing rate.
 
 ## 2. `--n-cpu-moe` context sweeps (35B-A3B class)
 
-Excerpts of recorded sweeps (f16 KV, `-ub 1024 -b 2048`, `-fa on`; VRAM = dedicated usage of
+Runs in this section use a 10.9 GB community mixed quant (declared file type IQ2_XXS;
+per-tensor mix Q3_K/Q4_K/IQ2_XXS by depth). Excerpts of recorded sweeps (f16 KV, `-ub 1024 -b 2048`, `-fa on`; VRAM = dedicated usage of
 `llama-server` after load):
 
 | Config | context | short decode | prefill @43.5K | decode @43.5K | VRAM | RAM |
@@ -49,8 +50,9 @@ Post-reboot end-to-end, desktop clean (200K context, f16 KV):
 
 Short-context best (`n-cpu-moe 8`, ~65K context): **63.0 t/s** short decode.
 
-Q8_0 variant (bigger RAM footprint): `n-cpu-moe 28`, c=160K → 46.08 / 48.29 / 48.99 t/s short
-(three runs, 250 tokens each) and 43.01 t/s at 43,560 input tokens with 638.42 t/s prefill.
+Mixed-quant variant (12.8 GB "APEX-I-Mini" recipe, declared Q3_K_M; Q3_K/Q4_K/IQ2_S by depth),
+`n-cpu-moe 28`, c=160K → 46.08 / 48.29 / 48.99 t/s short (three runs, 250 tokens each) and
+43.01 t/s at 43,560 input tokens with 638.42 t/s prefill.
 
 ## 3. `GGML_SYCL_F16=ON` build
 
