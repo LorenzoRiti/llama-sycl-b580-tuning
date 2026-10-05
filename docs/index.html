@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="llama.cpp SYCL patches and tuning for Intel Arc B580 12 GB: a 35B MoE model at 47.79 t/s with 160K context on a single 12 GB card.">
+<title>llama.cpp SYCL on Intel Arc B580 — 35B MoE on a 12 GB card</title>
+<style>
+*{box-sizing:border-box}
+body{background:#111115;color:#d9d9df;font:16px/1.65 "Segoe UI",system-ui,sans-serif;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:48px 22px 60px}
+.hero{padding:26px 0 10px}
+.kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#5aa2ff;margin-bottom:10px}
+h1{font-size:34px;line-height:1.2;color:#fff;margin:0 0 14px;letter-spacing:-.01em}
+h1 span{color:#7fb5d9}
+.lead{font-size:17px;color:#a9a9b5;max-width:720px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:34px 0 40px}
+.kpi{background:#1a1a21;border:1px solid #26262e;border-radius:10px;padding:16px 18px}
+.kpi b{display:block;font-size:24px;color:#fff;letter-spacing:-.01em}
+.kpi span{font-size:12.5px;color:#83838e}
+section{margin:42px 0}
+h2{font-size:20px;color:#fff;margin:0 0 14px}
+h2 .n{color:#5aa2ff}
+p{color:#b7b7c1;max-width:760px}
+a{color:#7fb5d9;text-decoration:none}
+a:hover{text-decoration:underline}
+code,pre{font-family:Consolas,"Cascadia Mono",monospace}
+code{background:#1e1e26;border:1px solid #2b2b34;border-radius:5px;padding:1px 6px;font-size:13.5px;color:#cfe4f7}
+pre{background:#17171d;border:1px solid #282830;border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:13.5px;color:#cfd6e4;line-height:1.6}
+pre .c{color:#6f6f7a}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #26262e}
+th{color:#83838e;font-weight:600;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+td{color:#c7c7cf}
+td b{color:#fff}
+.patches{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.patch{display:flex;gap:12px;align-items:baseline;background:#191920;border:1px solid #25252d;border-radius:9px;padding:11px 15px}
+.patch .id{flex-shrink:0;font-size:12px;font-weight:700;color:#5aa2ff;font-family:Consolas,monospace}
+.patch .t{font-size:14.5px;color:#d5d5dc}
+.patch .t small{display:block;color:#7d7d88;font-size:12.5px;margin-top:2px}
+.links{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.lnk{display:inline-block;background:#1d3a5f;border:1px solid #3b82f6;color:#a9c9ff;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600}
+.lnk:hover{background:#22456f;text-decoration:none}
+.lnk.alt{background:#14301f;border-color:#2e8b57;color:#9fe0b8}
+.lnk.alt:hover{background:#183a26}
+.num{color:#4fd18b;font-weight:700}
+footer{color:#66666f;font-size:13px;border-top:1px solid #23232b;padding-top:18px;margin-top:48px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="kicker">llama.cpp · SYCL · Intel Arc B580 12 GB</div>
+    <h1>Run a <span>35B MoE model on a single 12&nbsp;GB</span> Intel Arc B580</h1>
+    <p class="lead">A small patch set and a set of measured recipes for llama.cpp's SYCL backend on
+    Battlemage. Experts on the CPU, everything else on the GPU: <b>47.79 t/s decode</b>, 638 t/s
+    prefill at 43.5K tokens, <b>160K context</b> — on a card the model does not fit into.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><b>47.79&nbsp;t/s</b><span>decode (35B-A3B Q8_0)</span></div>
+    <div class="kpi"><b>160K</b><span>context, f16 KV</span></div>
+    <div class="kpi"><b>12&nbsp;GB</b><span>one B580, no second card</span></div>
+    <div class="kpi"><b>7</b><span>focused patches</span></div>
+  </div>
+
+  <section>
+    <h2>Why it works</h2>
+    <p>The model is a sparse MoE: 35B parameters total, ~3B active per token. With
+    <code>--n-cpu-moe</code> the expert FFNs stay on the CPU (read at DDR5 speed, and they are only
+    a fraction of the work per token), while attention, Gated DeltaNet and the shared experts run at
+    full GPU speed. That is what puts a 35B-class model, with a six-figure context, on a 12 GB card.</p>
+  </section>
+
+  <section>
+    <h2>The patches <span class="n">(7)</span></h2>
+    <div class="patches">
+      <div class="patch"><span class="id">0001</span><span class="t">Flash-attention parallel-blocks knob (<code>GGML_SYCL_FA_PB</code>)
+        <small>+7% decode at 44K context on these shapes; single FA case −53.5%; 2 GB scratch cap for safety</small></span></div>
+      <div class="patch"><span class="id">0002</span><span class="t">Flash-attention perf tests with the exact 35B-A3B decode shapes
+        <small>32 cases, hs 256 · GQA 8 · KV 4K→88K · F16/Q8_0 — keeps the knob honest in test-backend-ops</small></span></div>
+      <div class="patch"><span class="id">0003</span><span class="t">Unsupported-type CPU fallback instead of abort
+        <small>mixed-quant models load with a warning instead of killing the process</small></span></div>
+      <div class="patch"><span class="id">0004</span><span class="t">ngram-cache const-ref (speculative drafting)
+        <small>drafting 8.54 µs → 0.90 µs/token, ~9.5×</small></span></div>
+      <div class="patch"><span class="id">0005</span><span class="t">Reasoning-budget soft ramp
+        <small>progressive end-sequence bias instead of hard forcing; anti-empty window after the block closes</small></span></div>
+      <div class="patch"><span class="id">0006</span><span class="t">MSVC AVX-512 BF16 include fix</span></div>
+      <div class="patch"><span class="id">0007</span><span class="t">MoE expert matmul perf tests (<code>MMID_BENCH=1</code>)</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Measured results</h2>
+    <table>
+      <tr><th>Model</th><th>Quant</th><th>Context</th><th>Decode</th><th>Notes</th></tr>
+      <tr><td>Qwen3.6-35B-A3B</td><td>Q8_0</td><td>160K</td><td><b>47.8 t/s</b></td><td>43.0 t/s at 43.5K depth, 638 t/s prefill</td></tr>
+      <tr><td>Qwen3.6-35B-A3B</td><td>Q3_K_M-class</td><td>200K</td><td><b>50.3 t/s</b></td><td>43.0 t/s at 44K, ~10.8 GB VRAM</td></tr>
+      <tr><td>4B-class</td><td>Q4_K_M</td><td>16K</td><td><b>~90 t/s</b></td><td>always-on resident model, RAM ~0</td></tr>
+      <tr><td colspan="5"><small>Prefill at 43.5K: 638–867 t/s depending on quant/n-cpu-moe. Full tables in
+        <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</small></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Quick start</h2>
+<pre><span class="c"># apply patches on a fresh llama.cpp</span>
+git clone https://github.com/ggml-org/llama.cpp &amp;&amp; cd llama.cpp
+for p in llama-sycl-b580-tuning/patches/*.patch; do git apply -3 "$p"; done
+
+<span class="c"># build (Windows + oneAPI)</span>
+cmake -B build -DGGML_SYCL=ON -DGGML_SYCL_F16=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+
+<span class="c"># run a 35B-A3B on 12 GB</span>
+set GGML_SYCL_FA_PB=160
+set GGML_SYCL_HOST_PINNED_MEM=0
+llama-server -m model-Q8_0.gguf -ngl 99 --n-cpu-moe 28 -c 163840 -fa on -ctk f16 -ctv f16</pre>
+  </section>
+
+  <section>
+    <h2>Links</h2>
+    <div class="links">
+      <a class="lnk" href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning">GitHub repository</a>
+      <a class="lnk alt" href="https://intelinside.ai/results/229">Benchmark on Intelinside</a>
+      <a class="lnk" href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">Full measurements</a>
+    </div>
+  </section>
+
+  <footer>
+    MIT license. Patches derived from <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>
+    (MIT, © The ggml authors). Hardware: Intel Arc B580 12 GB · oneAPI 2026.0 · Windows 11 ·
+    Ryzen 5 9600X, 32 GB DDR5-6000. Numbers are single-machine, self-reported, logs and method in the repository.
+  </footer>
+</div>
+</body>
+</html>

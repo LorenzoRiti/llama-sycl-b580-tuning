@@ -1,5 +1,9 @@
 # llama.cpp SYCL patches and tuning for Intel Arc B580 (12 GB)
 
+**[Project page](https://lorenzoriti.github.io/llama-sycl-b580-tuning/)** ·
+**[Benchmark on Intelinside](https://intelinside.ai/results/229)** ·
+**[Full measurements](docs/RESULTS.md)**
+
 Patches and measured recipes for running large MoE models on a **single Intel Arc B580 (12 GB)**
 with the llama.cpp **SYCL** backend on Windows.
 
