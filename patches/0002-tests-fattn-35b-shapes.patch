@@ -1,0 +1,20 @@
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+index 0ef71c6..c317d7a 100644
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -11260,6 +11260,15 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf() {
+     std::vector<std::unique_ptr<test_case>> test_cases;
+ 
++    // decode attention of Qwen3.6-35B-A3B (hs 256, 2 KV heads, gqa 8, 1 query token) at several KV lengths
++    for (ggml_type type_KV : {GGML_TYPE_F16, GGML_TYPE_Q8_0}) {
++        for (int64_t nb : {1, 2, 3, 4}) {
++            for (int64_t kv : {4096, 16384, 44032, 88064}) {
++                test_cases.emplace_back(new test_flash_attn_ext(256, 256, 2, {8, 1}, kv, nb, true, false, 0, 0, GGML_PREC_F32, type_KV, type_KV));
++            }
++        }
++    }
++
+     // SWIGLU at a 27B-class FFN width, fused [gate|up] vs split operands
+     // note: same bytes either way, so a backend that indexes them differently shows it here
+     for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32}) {

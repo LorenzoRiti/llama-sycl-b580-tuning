@@ -1,0 +1,24 @@
+diff --git a/ggml/src/ggml-sycl/fattn-common.hpp b/ggml/src/ggml-sycl/fattn-common.hpp
+index 82813f7..4655112 100644
+--- a/ggml/src/ggml-sycl/fattn-common.hpp
++++ b/ggml/src/ggml-sycl/fattn-common.hpp
+@@ -1095,6 +1095,19 @@ void launch_fattn(
+             }
+         }
+ 
++        // env override of the number of parallel blocks along the KV axis (0 = auto)
++        static const int fa_pb_override = ggml_sycl_get_env("GGML_SYCL_FA_PB", 0);
++        if (fa_pb_override > 0) {
++            int pb = std::max(1, std::min(fa_pb_override, ntiles_KQ));
++            // dst_tmp holds parallel_blocks * KQV floats; keep the scratch under 2 GB
++            // so a large override cannot exhaust device memory on big batches
++            const int64_t kqv_bytes = (int64_t) ggml_nelements(KQV) * sizeof(float);
++            if (kqv_bytes > 0) {
++                pb = (int) std::max<int64_t>(1, std::min<int64_t>(pb, ((int64_t) 2 << 30) / kqv_bytes));
++            }
++            parallel_blocks = pb;
++        }
++
+         blocks_num.x = ntiles_x;
+         blocks_num.y = parallel_blocks;
+         blocks_num.z = ntiles_z_gqa*K->ne[2]*Q->ne[3];
