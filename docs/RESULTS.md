@@ -17,7 +17,7 @@ from `llama-server` timings; prefill = prompt-processing rate.
   `parallel_blocks × KQV` scratch and OOM the device (`UR_RESULT_ERROR_DEVICE_LOST` at
   hsk=576); the shipped patch caps the scratch at 2 GB.
 
-### End-to-end (35B-A3B, `--n-cpu-moe 24`, f16 KV, c=44K)
+### End-to-end (35B-A3B, `--n-cpu-moe 24`, c=44K)
 
 | Config | short decode | prefill @44K | decode @44K |
 |---|---|---|---|
@@ -27,7 +27,7 @@ from `llama-server` timings; prefill = prompt-processing rate.
 ## 2. `--n-cpu-moe` context sweeps (35B-A3B class)
 
 Runs in this section use a 10.9 GB community mixed quant (declared file type IQ2_XXS;
-per-tensor mix Q3_K/Q4_K/IQ2_XXS by depth). Excerpts of recorded sweeps (f16 KV, `-ub 1024 -b 2048`, `-fa on`; VRAM = dedicated usage of
+per-tensor mix Q3_K/Q4_K/IQ2_XXS by depth). Excerpts of recorded sweeps (`-ub 1024 -b 2048`, `-fa on`; VRAM = dedicated usage of
 `llama-server` after load):
 
 | Config | context | short decode | prefill @43.5K | decode @43.5K | VRAM | RAM |
@@ -38,7 +38,7 @@ per-tensor mix Q3_K/Q4_K/IQ2_XXS by depth). Excerpts of recorded sweeps (f16 KV,
 | n-cpu-moe 20 | 200,000 | 53.2 t/s | 718 t/s | 41.4 t/s | 11.7 GB | 93% — too tight |
 | n-cpu-moe 16 | 180,224 | 38.1 t/s | 639 t/s | 34.2 t/s | 11.7 GB | 96% — degraded |
 
-Post-reboot end-to-end, desktop clean (200K context, f16 KV):
+Post-reboot end-to-end, desktop clean (200K context):
 
 | `--n-cpu-moe` | short decode | prefill @44K | decode @44K | VRAM |
 |---|---|---|---|---|

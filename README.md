@@ -71,7 +71,7 @@ The model does not fit in VRAM; `--n-cpu-moe` keeps the expert FFNs on the CPU w
 Gated DeltaNet and shared experts stay on the GPU. Everything is read at DDR5 speed for the
 expert part, GPU speed for the rest.
 
-Measured on 35B-A3B (3B active), f16 KV (the launcher defaults of that period), `-ub 1024 -b 2048`, `-fa on`:
+Measured on 35B-A3B (3B active), `-ub 1024 -b 2048`, `-fa on`:
 
 | Quant | `--n-cpu-moe` | context | short decode | decode @43.5K | notes |
 |---|---|---|---|---|---|
