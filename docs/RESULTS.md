@@ -108,3 +108,30 @@ same B580 machine in the same week; every 35B-A3B weight file is a community mix
 Notes: Occamy-1.0 50.5 t/s is short-context decode with the production config and passed the
 3-task quality gate at 1.000. The Qwen3.8 distill runs carry a separate MTP draft head
 (acceptance 90–100%). Dense GDN (non-MoE) 4B runs fully on the GPU.
+
+## 8. Bonsai 2 27B (ternary) — `arc-b580` fork, Oct 2026
+
+Different runtime from sections 1–7: these runs use the
+[arc-b580 fork](https://github.com/Torchit1/llama.cpp) (commit `fc18b1a`), required for PrismML's
+ternary `PTQ1_0` format. Same B580, Windows 11, oneAPI 2026.0, level-zero driver `32.0.101.9034`,
+community MTP weight file (6.53 GB). Full sweep: [BONSAI.md](BONSAI.md).
+
+196K context, decode of a large code-edit task (server timings, thinking off), by weight repack:
+
+| `GGML_SYCL_PTQ1_T2` | spill (`llama-server` shared) | decode |
+|---|---|---|
+| `all` (`-ub 1024`) | ~2,360 MB | 24.8 t/s |
+| `ffn` (`-ub 1024`) | ~1,920 MB | 24.6 t/s |
+| unset (`-ub 1024`) | ~1,190 MB | 66.8 t/s |
+| unset (`-ub 512`) | ~730 MB | **74.2 t/s** |
+
+Quality vs thinking budget (hard subset, code with executed unit tests, greedy): 256 → 0.750;
+2048 → 0.950 (199 s); 6144 → 0.950 (478 s); 12288 → 0.742 (902 s — overthinking degrades).
+Full 9-task suite: thinking off 0.694; thinking on @2048 0.903–1.000; @6144 0.978.
+
+Speculative decoding (64K, codegen / small edit / large edit, t/s): MTP4 + n-gram 256 →
+82.7/87.5/96.6; **MTP4 only → 86.1/88.9/115.2**; MTP6 → 75.1/–/110.3; n-gram only → 46.5/–/–.
+
+Needle test at 196K: exact recall on a 20K-token document, 26 s end-to-end (warm).
+Warmup after load: first prefill 568 t/s vs 94 t/s cold (first agent turn ~42 s → seconds).
+`llama-bench` short-context: pp512 1013 t/s / tg128 42.2 t/s (repack off), F16 build no gain.

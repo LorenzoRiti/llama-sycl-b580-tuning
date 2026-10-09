@@ -101,9 +101,22 @@ footer{color:#66666f;font-size:13px;border-top:1px solid #23232b;padding-top:18p
       <tr><td>Qwen3.8-35B-Distill (abliterated)</td><td>mixed 13.7 GB + MTP head</td><td>131K</td><td><b>41.5 t/s</b></td><td>31.6 t/s at 53K, MTP acceptance 90-100%</td></tr>
       <tr><td>Ornith-1.5-35B-A3B (abliterated)</td><td>mixed 10.9 GB</td><td>200K</td><td><b>45.0 t/s</b></td><td>at 43.5K depth, 890 t/s prefill</td></tr>
       <tr><td>4B-class (dense GDN)</td><td>Q4_K_M</td><td>16K</td><td><b>~90 t/s</b></td><td>always-on resident model, RAM ~0</td></tr>
-      <tr><td colspan="5"><small>Prefill at 43.5K: 638–867 t/s depending on quant/n-cpu-moe. Full tables in
-        <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</small></td></tr>
+      <tr><td>Bonsai 2 27B (ternary, dense — arc-b580 fork)</td><td>PTQ1_0 ~5.9 GiB</td><td>196K</td><td><b>53–74 t/s</b></td><td>~49 t/s with a 2K thinking budget; 115 t/s large edits @64K</td></tr>
+      <tr><td colspan="5"><small>Prefill at 43.5K: 638–867 t/s depending on quant/n-cpu-moe. Bonsai needs the arc-b580 fork
+        (ternary format). Full tables in
+        <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>
+        and <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/BONSAI.md">docs/BONSAI.md</a>.</small></td></tr>
     </table>
+  </section>
+
+  <section>
+    <h2>Second recipe: a ternary 27B at 196K</h2>
+    <p>PrismML's Ternary Bonsai 2 27B (~1.75 bits/weight, 5.9 GiB) fits a 196K context on the same
+    card with the <a href="https://github.com/Torchit1/llama.cpp">arc-b580 SYCL fork</a> (stock
+    llama.cpp rejects the ternary format). Measured 53–74 t/s plain, ~49 t/s with a short thinking
+    budget, 115 t/s on large code edits. The counter-intuitive finding: the fork's XMX weight
+    repack is a <b>net loss at 196K</b> — leaving it off is 3× faster. Sweep and tables in
+    <a href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/BONSAI.md">docs/BONSAI.md</a>.</p>
   </section>
 
   <section>
@@ -128,6 +141,7 @@ llama-server -m model.gguf -ngl 99 --n-cpu-moe 28 -c 163840 -fa on -ctk f16 -ctv
       <a class="lnk" href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning">GitHub repository</a>
       <a class="lnk alt" href="https://intelinside.ai/results/229">Benchmark on Intelinside</a>
       <a class="lnk" href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/RESULTS.md">Full measurements</a>
+      <a class="lnk alt" href="https://github.com/LorenzoRiti/llama-sycl-b580-tuning/blob/main/docs/BONSAI.md">Bonsai 2 27B sweep</a>
     </div>
   </section>
 

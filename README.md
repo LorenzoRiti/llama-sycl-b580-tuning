@@ -12,6 +12,10 @@ on one 12 GB card**, by offloading the MoE expert layers to the CPU and keeping 
 on the GPU. The same recipe applies to the whole Gated-DeltaNet MoE family — base models,
 distilled and community derivatives — not just one checkpoint.
 
+Second recipe on the same card: **PrismML's Ternary Bonsai 2 27B** (dense, ternary weights,
+~1.75 bits/weight) at **196K context** — 53–74 t/s plain, ~49 t/s with a short thinking budget.
+That one runs on the `arc-b580` SYCL fork, see [docs/BONSAI.md](docs/BONSAI.md).
+
 Target setup used for all measurements:
 
 - GPU: Intel Arc B580 12 GB (Battlemage), Level Zero, oneAPI 2026.0
@@ -109,6 +113,25 @@ Prefix prefill for the Qwen3.8 distill measured at 4K and 53K context (454/456 t
 41.5 t/s short and 31.6 t/s at 53K- that shape of the curve is typical for the family with
 `--n-cpu-moe 32`. All 35B-A3B weight files above are community mixed quants (declared file
 types Q3_K_M / IQ2_XXS); composition verified per tensor from the GGUF headers.
+
+### Ternary 27B (Bonsai 2) at 196K — needs the `arc-b580` fork
+
+A different shape of model on the same card: **PrismML's Ternary Bonsai 2 27B** (ternary weights,
+~1.75 bits/weight, 5.9 GiB; derived from Qwen3.8-27B). Stock llama.cpp cannot read the ternary
+`PTQ1_0` format — this model runs on the [arc-b580 fork](https://github.com/Torchit1/llama.cpp)
+(XMX ternary kernels, q4_0 decode attention, MTP drafting).
+
+Measured at 196K on the same B580: **53–74 t/s** plain, **~49 t/s** with a 2K thinking budget,
+**115 t/s** on large code edits at 64K, exact needle recall at 196K. Three findings matter more
+than the flags:
+
+- the fork's XMX weight repack (`GGML_SYCL_PTQ1_T2`) costs ~+1.6 GB VRAM and is a **net loss at
+  196K** — leaving it off is 3× faster (74 vs 25 t/s) because it eliminates the spill;
+- keep `-b 2048`: shrinking the logical batch (`-b 512`) cuts spill but collapses decode 4×;
+- thinking budgets: this model thinks **short** — 2K–6K reasoning tokens is the quality sweet
+  spot; 12K+ measurably degrades it and costs 4–5× the time.
+
+Full sweep and all tables: [docs/BONSAI.md](docs/BONSAI.md).
 
 ### Small always-on model
 
